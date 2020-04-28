@@ -5,6 +5,7 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
+  min-width: 1600px;
 }
 .el-breadcrumb {
   margin-bottom: 5px;
@@ -18,3 +19,4 @@ body,
   font-size: 14px;
 }
 
+ 
