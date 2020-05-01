@@ -18,5 +18,8 @@ body,
   margin-top: 15px;
   font-size: 14px;
 }
+.el-cascader-panel {
+  height: 200px !important;
+}
 
  
