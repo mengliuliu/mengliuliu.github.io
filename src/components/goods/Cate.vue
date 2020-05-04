@@ -88,7 +88,7 @@
     >
       <!-- 添加分类的表单 -->
       <el-form
-        ref="editFormRef"
+        ref="addCateFormRef"
         :model="addCateForm"
         :rules="addCateFormRules"
         label-width="100px"
