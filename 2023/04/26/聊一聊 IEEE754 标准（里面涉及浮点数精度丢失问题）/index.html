@@ -1,0 +1,429 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author"><title>聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题） · ml</title><meta name="description" content="一、什么是 IEEE754 标准IEEE 二进制浮点数算术标准（IEEE 754）是 20 世纪 80 年代以来最广泛使用的浮点数运算标准，为许多 CPU 与浮点运算器所采用。IEEE754 标准提供了如何在计算机内存中，以二进制的方式存储十进制浮点数的具体标准。IEEE754 标准发布于 1985"><meta name="og:description" content="一、什么是 IEEE754 标准IEEE 二进制浮点数算术标准（IEEE 754）是 20 世纪 80 年代以来最广泛使用的浮点数运算标准，为许多 CPU 与浮点运算器所采用。IEEE754 标准提供了如何在计算机内存中，以二进制的方式存储十进制浮点数的具体标准。IEEE754 标准发布于 1985"><meta name="twitter:site" content="ml"><meta name="twitter:title" content="聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题）"><meta name="twitter:card" content="summary"><meta name="keywords" content=""><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/bootstrap.min.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="stylesheet" href="/css/style.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"><meta name="generator" content="Hexo 6.3.0"><link rel="stylesheet" href="/css/prism.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css"></head><body><div class="container" id="stage"><div class="row"><div class="col-sm-3 col-xs-12 side-container invisible" id="side-bar"><div class="vertical-text site-title"><h3 class="site-title-small" tabindex="-1"><a class="a-title" href="/">dreamL</a></h3><h1 class="site-title-large" tabindex="-1"><a class="a-title" href="/">我的空间</a></h1><!--h6(onclick="triggerSiteNav()") Trigger--></div><br class="visible-lg visible-md visible-sm"><div class="site-title-links" id="site-nav"><ul><li><a href="/">首页</a></li><li><a href="/archives">档案</a></li><li class="soc"><a href="http://example.com/atom.xml" target="_blank" rel="noopener noreferrer" aria-label="RSS"><i class="fa fa-rss">&nbsp;</i></a></li></ul><div class="visible-lg visible-md visible-sm site-nav-footer"><br class="site-nav-footer-br"><footer><p>&copy;&nbsp;2023&nbsp;<a target="_blank" href="http://example.com" rel="noopener noreferrer">Meng Liu</a></p><p>Theme&nbsp;<a target="_blank" href="https://github.com/SumiMakito/hexo-theme-typography" rel="noopener noreferrer">Typography</a>&nbsp;by&nbsp;<a target="_blank" href="https://www.keep.moe" rel="noopener noreferrer">Makito</a></p><p>Proudly published with&nbsp;<a target="_blank" href="https://hexo.io" rel="noopener noreferrer">Hexo</a></p></footer></div></div></div><div class="col-sm-9 col-xs-12 main-container invisible" id="main-container"><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post-container"><p class="post-title"><a>聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题）</a></p><p class="post-meta"><span class="date meta-item">Posted at&nbsp;2023-04-26</span></p><p class="post-abstract"><h2 id="一、什么是-IEEE754-标准"><a href="#一、什么是-IEEE754-标准" class="headerlink" title="一、什么是 IEEE754 标准"></a>一、什么是 IEEE754 标准</h2><p>IEEE 二进制浮点数算术标准（IEEE 754）是 20 世纪 80 年代以来最广泛使用的浮点数运算标准，为许多 CPU 与浮点运算器所采用。IEEE754 标准提供了如何在计算机内存中，<strong>以二进制的方式存储十进制浮点数</strong>的具体标准。IEEE754 标准发布于 1985 年，包括 javascript，Java，C 在内的许多编程语言在实现浮点数时，都遵循 IEEE754 标准。<br>那么问题来了，怎么存储浮点数？在探究浮点数怎么存储之前先看看整数是如何存储的。</p>
+<h2 id="二、整数的存储格式"><a href="#二、整数的存储格式" class="headerlink" title="二、整数的存储格式"></a>二、整数的存储格式</h2><h3 id="整数的基本概念"><a href="#整数的基本概念" class="headerlink" title="整数的基本概念"></a>整数的基本概念</h3><p>大家知道，整数包括负数，零，和正数。计算机中的整数分为有符号数和无符号数。<br>有符号数：最高位表示符号，即最高位为 0，表示正数，最高位为 1，表示负数。如果用 N 位来表示整数，那么有符号数的范围为：[-2^(N-1)^，2^(N-1)^-1]。用 8 位来表示有符号整数数，由于第 8 位用于表示了符号，因此，整数的表示范围为[-128，+127]。<br>无符号数：表示非负数，整个位数都用来表示整数的值。如果用 N 位来表示整数，无符号数的表示范围为[0，2^N^-1]。用 8 位来表示有符号整数数，则无符号数的表示范围为[0，255]。</p>
+<h3 id="整数的编码方式"><a href="#整数的编码方式" class="headerlink" title="整数的编码方式"></a>整数的编码方式</h3><p>整数的编码分为原码、反码、和补码。计算里使用的是补码的存储方式。它们的定义如下：</p>
+<p>原码：在数值前面增加了一位符号位（即最高位为符号位），该位为 0 表示正数，该位为 1 表示负数，其余位表示数值的大小。</p>
+<p>反码：正数的反码与其原码相同。负数的反码是对其原码逐位取反，但符号位除外。</p>
+<p>补码：正数的补码与其原码相同，负数的补码就是对该负数的反码加 1。</p>
+<h3 id="整数的存储格式"><a href="#整数的存储格式" class="headerlink" title="整数的存储格式"></a>整数的存储格式</h3><ul>
+<li><p>如果用一字节存储整数（有符号）</p>
+<table>
+<thead>
+<tr>
+<th>数值</th>
+<th>补码</th>
+<th>反码</th>
+<th>原码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>127</td>
+<td>0111 1111</td>
+<td>0111 1111</td>
+<td>0111 1111</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0000 0000</td>
+<td>0000 0000</td>
+<td>0000 0000</td>
+</tr>
+<tr>
+<td>-1</td>
+<td>1111 1111</td>
+<td>1111 1110</td>
+<td>1000 0001</td>
+</tr>
+<tr>
+<td>-127</td>
+<td>1000 0001</td>
+<td>1000 0000</td>
+<td>1111 1111</td>
+</tr>
+<tr>
+<td>-128</td>
+<td>1000 0000</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<p>注意：-128 没有相对应的原码和反码，-128 的补码为：10000000。</p>
+</li>
+<li><p>那么有了原码，计算机为什么还要用补码呢？</p>
+<p>来看看它们的运算情况。 假设字长为 8 位 ，那么原码的运算方式为： 1 - 1 &#x3D; 1 + ( -1 ) &#x3D;(00000001) + (10000001) &#x3D; (10000010) &#x3D; -2 ，这显然不正确。原码在两个整数的加法运算中是没有问题的，问题出现在带符号位的负数身上。 原码无法满足运算要求，因此对除符号位外的其余各位逐位取反就产生了反码。反码的取值空间和原码相同且一一对应。下面是反码的减法运算： 1 – 2 &#x3D; 1 + ( -2 ) &#x3D; (00000001) + (11111101) &#x3D; (11111110) &#x3D; ( -1 ) 正确。1 - 1 &#x3D; 1 + ( -1 )&#x3D; (00000001) + (11111110) &#x3D; (11111111) &#x3D; ( -0 ) 貌似没问题，其实有问题。反码的问题出现在(+0)和(-0)上，因为在人们的计算概念中零是没有正负之分的。 再来看补码的加减运算如下： 1 - 1 &#x3D; 1 + （-1） &#x3D; (00000001) + (11111111) &#x3D; (00000000) &#x3D; 0 正确。 1 – 2 &#x3D; 1 + （-2） &#x3D; (00000001) + (11111110) &#x3D; (11111111) &#x3D; ( -1 ) 正确。</p>
+</li>
+<li><p>补码的设计目的</p>
+<p>⑴ 使符号位能与有效值部分一起参加运算，从而简化运算规则。</p>
+<p>⑵ 使减法运算转换为加法运算，进一步简化计算机中运算器的线路设计。</p>
+<p>此外，在补码中用-128 代替了-0，所以没有+0 和 -0 之分。</p>
+<p>总结：原码无法满足减法运算、反码区分不了+0、-0，于是就有补码了</p>
+</li>
+</ul>
+<h2 id="三、浮点数的存储格式"><a href="#三、浮点数的存储格式" class="headerlink" title="三、浮点数的存储格式"></a>三、浮点数的存储格式</h2><h3 id="浮点数的基本概念"><a href="#浮点数的基本概念" class="headerlink" title="浮点数的基本概念"></a>浮点数的基本概念</h3><p>在计算机科学中，浮点（英语：floating point，缩写为 FP）是一种对于实数的近似值数值表现法，由一个有效数字（即尾数 M）加上幂数(E)来表示，通常是乘以某个基数的整数次指数得到。以这种表示法表示的数值，称为浮点数（floating-point number）。利用浮点进行运算，称为浮点计算，这种运算通常伴随着因为无法精确表示而进行的近似或舍入。</p>
+<h3 id="浮点数的规格化"><a href="#浮点数的规格化" class="headerlink" title="浮点数的规格化"></a>浮点数的规格化</h3><ul>
+<li><p>整数是用补码存储的，那么浮点数是用什么方式存储的呢？</p>
+<p>答案：IEEE754 标准中浮点数是用<strong>二进制的“科学计数法”</strong>来存储的</p>
+<p>科学记数法，是不是很熟悉，没错，就是它</p>
+<p>科学记数法是一种记数的方法。把一个数表示成 a 与 10 的 n 次幂相乘的形式（1≤|a|&lt;10，a 不为分数形式，n 为整数），这种<a target="_blank" rel="noopener" href="https://baike.baidu.com/item/%E8%AE%B0%E6%95%B0%E6%B3%95/967407">记数法</a>叫做<strong>科学记数法。</strong>当我们要标记或运算某个较大或较小且位数较多时，用科学记数法免去浪费很多空间和时间。</p>
+<p>一个数（X）可以这样表示：</p>
+<div  align="center">X &nbsp; = &nbsp; a &nbsp; × &nbsp; 10<sup>n</sup>&nbsp; &nbsp;（1≤|a|<10且n为整数）</div>
+</li>
+<li><p>规约形式的浮点数</p>
+<p>一个浮点数 （X） 可以这样表示：</p>
+<div  align="center">X &nbsp; = &nbsp; (−1)<sup>S</sup> &nbsp; × &nbsp; (1.F) &nbsp; × &nbsp; 2<sup>e</sup></div>
+
+<center> e &nbsp; = &nbsp; E &nbsp; − &nbsp; 固定偏移值 </center>
+
+<p><strong>如果浮点数的指数偏移值的编码在[1, 2^e^ - 2]之间</strong>（例如，单精度浮点数，其指数偏移值区间为 [1, 254]），且在科学表示法的表示方式下，<strong>分数</strong>部分最高有效位（即整数字）是 1，那么这个浮点数将被称为规约形式的浮点数。“规约”是指用唯一确定的浮点形式去表示一个值。</p>
+<p>这个浮点数在计算机中之需要存储 S、E、F 即可。</p>
+<p>⚠️ 注意：[1, 2e - 2]中的 e 指的是指数位的长度，单精度指数位长度为 8。</p>
+</li>
+</ul>
+<h3 id="浮点数的存储格式"><a href="#浮点数的存储格式" class="headerlink" title="浮点数的存储格式"></a>浮点数的存储格式</h3><ul>
+<li><p>浮点数存储格式有哪些？</p>
+<p>IEEE 754 规定了四种表示浮点数值的方式：单精确度（32 位）、双精确度（64 位）、延伸单精确度（43 比特以上，很少使用）与延伸双精确度（79 比特以上，通常以 80 位实现）。这里只介绍单精确度和双精确度。</p>
+<p>IEEE754 标准中，单精度二进制小数，使用 32 个比特存储。</p>
+<table>
+<thead>
+<tr>
+<th>比特长度：</th>
+<th>1</th>
+<th>8</th>
+<th>23</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>名称：</td>
+<td>S</td>
+<td>Exp</td>
+<td>Fraction</td>
+</tr>
+<tr>
+<td>比特编号：</td>
+<td>31</td>
+<td>30 至 23 偏正值（实际的指数大小+127）</td>
+<td>22 至 0 位编号（从右边开始为 0）</td>
+</tr>
+</tbody></table>
+<p>IEEE754 标准中，双精度二进制小数，使用 64 个比特存储。</p>
+<table>
+<thead>
+<tr>
+<th>比特长度：</th>
+<th>1</th>
+<th>11</th>
+<th>52</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>名称：</td>
+<td>S</td>
+<td>Exp</td>
+<td>Fraction</td>
+</tr>
+<tr>
+<td>比特编号：</td>
+<td>63</td>
+<td>62 至 52 偏正值（实际的指数大小+1023）</td>
+<td>51 至 0 位编号（从右边开始为 0）</td>
+</tr>
+</tbody></table>
+<div  align="center">X &nbsp; = &nbsp; (−1)<sup>S</sup> &nbsp; × &nbsp; (1.F) &nbsp; × &nbsp; 2<sup>e</sup></div>
+
+<center> e &nbsp; = &nbsp; E &nbsp; − &nbsp; 固定偏移值 </center>
+
+<p>X：真值</p>
+<p>S：符号位（0 为正、1 为负）</p>
+<p>F：尾数位（小数点右边的尾数 F）</p>
+<p>E：指数位（ ⚠️ 注意： 指数位存储的不是指数（e），存储的是指数偏移值（指数+固定偏移值））</p>
+<p>e：指数（指数为正，小数点右移，反之左移）</p>
+<p>尾数：汉语词语，汉语拼音为 wěi shù；它有语文(现实生活之中语言文字)意义上及数学意义上的两大类含义。在数学里，有三种(自然数的个位数、<strong>有理数之中浮点数的小数部分</strong>、常用对数的尾数)含义；在现实生活中也指记账等号码的后几位，结算帐目中的小数目等。常用在手机号码、身份证号码等。</p>
+<p>固定偏移值：32 位（单精度）浮点数固定偏移值为 127，64 位（双精度）浮点数的固定偏移值为 1023</p>
+<p>指数偏移值：是指浮点数表示法中的指数位的编码值为指数的实际值加上某个固定的值（固定偏移值），IEEE 754 标准规定该固定值为 2^e-1^ - 1，其中的<strong>e 为存储指数的比特的长度</strong>。</p>
+<p>⚠️ 注意：在这里我们把 1.F 称为小数或者分数，F 称为尾数。</p>
+</li>
+<li><p>问题与解答</p>
+<p>问 1. 为什么尾数位存储的是 F，前面那个 1 不用存储了么？</p>
+<p>问 2. 为什么指数位不直接存储指数，而是存储指数偏移值（指数+固定偏移值）？</p>
+<p>问 3. 为什么固定偏移值为 2^e-1^ - 1？</p>
+<p>问 4. 小朋友你是不是有很多问号？？？</p>
+<p>答 1. 分数部分是 1.F，因为规格化的浮点数的分数部分最左位总是 1，一个确定的值存它干嘛，留那一位存储小数不香么，故这一位不予存储。</p>
+<p>答 2,3. 如果直接存储指数，那么还要区分正负，留 1 比特作为符号位，太麻烦了。以单精度浮点数为例，指数位长度是 8 位，取值范围是 [0, 255]。但是科学计数法中的指数是可以为负数的，所以约定加上一个中间数 127，指数 [-127, 128] 与指数位的 [0, 255] 一一对应。</p>
+</li>
+</ul>
+<h2 id="四、浮点数的表示（单精度为例）"><a href="#四、浮点数的表示（单精度为例）" class="headerlink" title="四、浮点数的表示（单精度为例）"></a>四、浮点数的表示（单精度为例）</h2><h3 id="浮点数各种极值情况"><a href="#浮点数各种极值情况" class="headerlink" title="浮点数各种极值情况"></a>浮点数各种极值情况</h3><table>
+<thead>
+<tr>
+<th align="center">类别</th>
+<th align="center">正负号</th>
+<th align="center">实际指数</th>
+<th align="center">有偏移指数</th>
+<th align="center">指数域</th>
+<th align="center">尾数域</th>
+<th align="center">数值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">零</td>
+<td align="center">0</td>
+<td align="center">-126</td>
+<td align="center">0</td>
+<td align="center">0000 0000</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">0.0</td>
+</tr>
+<tr>
+<td align="center">负零</td>
+<td align="center">1</td>
+<td align="center">-126</td>
+<td align="center">0</td>
+<td align="center">0000 0000</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">−0.0</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">0</td>
+<td align="center">0</td>
+<td align="center">127</td>
+<td align="center">0111 1111</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">1.0</td>
+</tr>
+<tr>
+<td align="center">-1</td>
+<td align="center">1</td>
+<td align="center">0</td>
+<td align="center">127</td>
+<td align="center">0111 1111</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">−1.0</td>
+</tr>
+<tr>
+<td align="center">最小的非规约数</td>
+<td align="center">*</td>
+<td align="center">-126</td>
+<td align="center">0</td>
+<td align="center">0000 0000</td>
+<td align="center">000 0000 0000 0000 0000 0001</td>
+<td align="center">±2^−23^ × 2^−126^ &#x3D; ±2^−149^ ≈ ±1.4×10^-45^</td>
+</tr>
+<tr>
+<td align="center">中间大小的非规约数</td>
+<td align="center">*</td>
+<td align="center">-126</td>
+<td align="center">0</td>
+<td align="center">0000 0000</td>
+<td align="center">100 0000 0000 0000 0000 0000</td>
+<td align="center">±2^−1^ × 2^−126^ &#x3D; ±2^−127^ ≈ ±5.88×10^-39^</td>
+</tr>
+<tr>
+<td align="center">最大的非规约数</td>
+<td align="center">*</td>
+<td align="center">-126</td>
+<td align="center">0</td>
+<td align="center">0000 0000</td>
+<td align="center">111 1111 1111 1111 1111 1111</td>
+<td align="center">±(1−2^−23^) × 2^−126^ ≈ ±1.18×10^-38^</td>
+</tr>
+<tr>
+<td align="center">最小的规约数</td>
+<td align="center">*</td>
+<td align="center">-126</td>
+<td align="center">1</td>
+<td align="center">0000 0001</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">±2^−126^ ≈ ±1.18×10^-38^</td>
+</tr>
+<tr>
+<td align="center">最大的规约数</td>
+<td align="center">*</td>
+<td align="center">127</td>
+<td align="center">254</td>
+<td align="center">1111 1110</td>
+<td align="center">111 1111 1111 1111 1111 1111</td>
+<td align="center">±(2−2^−23^) × 2^127^ ≈ ±3.4×10^38^</td>
+</tr>
+<tr>
+<td align="center">正无穷</td>
+<td align="center">0</td>
+<td align="center">128</td>
+<td align="center">255</td>
+<td align="center">1111 1111</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">+∞</td>
+</tr>
+<tr>
+<td align="center">负无穷</td>
+<td align="center">1</td>
+<td align="center">128</td>
+<td align="center">255</td>
+<td align="center">1111 1111</td>
+<td align="center">000 0000 0000 0000 0000 0000</td>
+<td align="center">−∞</td>
+</tr>
+<tr>
+<td align="center"><a target="_blank" rel="noopener" href="https://zh.m.wikipedia.org/wiki/NaN">NaN</a></td>
+<td align="center">*</td>
+<td align="center">128</td>
+<td align="center">255</td>
+<td align="center">1111 1111</td>
+<td align="center">非全 0</td>
+<td align="center">NaN</td>
+</tr>
+<tr>
+<td align="center">* 符号位可以为 0 或 1 .</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<h3 id="数字的表示"><a href="#数字的表示" class="headerlink" title="数字的表示"></a>数字的表示</h3><ul>
+<li><p>规约形式的浮点数（ normal number ）</p>
+<p><strong>如果浮点数的指数偏移值的编码在[1, 2^e^ - 2]之间</strong>（例如，单精度浮点数，其指数偏移值区间为 [1, 254]），且分数大于等于 1 且小于 2。换句话说就是在科学表示法的表示方式下，分数部分最高有效位（即整数字）是 1。那么这个浮点数就是规约形式的浮点数。</p>
+<p>以单精度为例，e &#x3D; 8，则指数偏移值的编码在[1, 254]之间，指数的编码在[-126,127]之间，且尾数位任意（小数点前面有个 1，能确保分数大于等于 1 且小于 2）。那么最大的规约数，符号位为 0（表示正），尾数位为 111 1111 1111 1111 1111 1111，指数为 127，指数位为 1111 1110（254）。则最大的规约数的机器码为 0<font color=\#0099ff>111 1111 0</font>111 1111 1111 1111 1111 1111。二进制科学计数法为 1.111 1111 1111 1111 1111 1111 * 2^127^。转换成十进制约等于 3.402823<em>e</em>^+38^。那么最小的正规约数，符号位为 0（表示正），尾数位为 000 0000 0000 0000 0000 0000，指数为 -126，指数位为 0000 0001（-126）。则最小的正规约数的机器码为 0<font color=\#0099ff>000 0000 1</font>000 0000 0000 0000 0000 0000。二进制科学计数法为 1.000 0000 0000 0000 0000 0000 * 2^-126^。转换成十进制约等于 1.18×10^-38^。</p>
+<p>由上所得，规约形势的浮点数取值范围为 [-3.4×10^38^, -1.18×10^-38^] U [1.18×10^-38^, 3.4×10^38^] 。</p>
+<p>也就是说，使用规约形式的浮点数时，我们除了无法表示 0，也无法表示（0，1.18×10^-38^）之间的（靠近 0 的极小数）更无法表示大于 3.4×10^38^的数。0、非规约形势的浮点数、∞ 就是解决这个问题的。</p>
+</li>
+<li><p>0</p>
+<p><strong>如果浮点数的指数偏移值的编码值是 0</strong>，尾数位前隐藏的整数部分是<strong>0.</strong> 而非 **1.**，并且尾数部分是 0。那么这个浮点数就是 0。</p>
+<p>指数的偏移值是 0，那么指数是-126，那么+0 的机器码为 0<font color=\#0099ff>000 0000 0</font>000 0000 0000 0000 0000 0000。</p>
+<p>+0 的十进制为 0.0*2^-126^ &#x3D; 0</p>
+<p>⚠️ 注意： 0 和非规约形式的浮点数中指数偏移值的计算方法有所不同，指数 &#x3D; 1 - 固定偏移值</p>
+</li>
+<li><p>非规约形式的浮点数（ denormal number ）</p>
+<p><strong>如果浮点数的指数偏移值的编码值是 0</strong>，尾数位前隐藏的整数部分是<strong>0.</strong> 而非 **1.**，并且尾数部分非 0。那么这个浮点数就是非规约形式的浮点数。</p>
+<p>尾数位的范围为[00000000000000000000001, 11111111111111111111111] 。那么最大的非规约数，符号位为 0（表示正），尾数位为 111 1111 1111 1111 1111 1111，指数为-126。则最大的非规约数的机器码为 0<font color=\#0099ff>000 0000 0</font>111 1111 1111 1111 1111 1111。二进制科学计数法为 0.111 1111 1111 1111 1111 1111 * 2^-126^。转换成十进制约等于 1.18×10^-38^。</p>
+<p>由上所得，规约形势的浮点数取值范围为 [-1.18×10^-38^, -1.4×10^-45^] U [1.4×10^-45^, 1.18×10^-38^] 。</p>
+</li>
+</ul>
+<p>看看这个图，是不是明白了一点。<br><img src="https://pic3.zhimg.com/v2-1b6f26cad2e694e143016cbe6094c80e_b.jpg" alt="img"></p>
+<h3 id="非数字的表示（特殊数）"><a href="#非数字的表示（特殊数）" class="headerlink" title="非数字的表示（特殊数）"></a>非数字的表示（特殊数）</h3><ul>
+<li><p>±∞</p>
+<p><strong>如果指数偏移值 &#x3D; 2^e^ - 1</strong>，并且尾数的<strong>小数部分</strong>是 0，这个数是 ±<a target="_blank" rel="noopener" href="https://zh.m.wikipedia.org/wiki/%E6%97%A0%E7%A9%B7%E5%A4%A7">∞</a>（同样和符号位相关）</p>
+<p>指数的偏移值是 255，那么指数是 128，</p>
+<p>那么+∞ 的机器码为 0<font color=\#0099ff>111 1111 1</font>000 0000 0000 0000 0000 0000</p>
+<p>+∞ 的十进制为 1.0*2^128^ ≈ 3.4e^38^</p>
+</li>
+<li><p>NaN</p>
+<p><strong>如果指数偏移值 &#x3D; 2^e^ - 1</strong>，并且尾数的<strong>小数部分</strong>非 0，这个数表示为非数（NaN）</p>
+<p>指数的偏移值是 255，那么指数是 128，</p>
+<p>那么 NaN 的机器码为 0<font color=\#0099ff>111 1111 1</font>xxx xxxx xxxx xxxx xxxx xxxx（xxx xxxx xxxx xxxx xxxx xxxx 中最少有一个 1）</p>
+</li>
+</ul>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><ul>
+<li><p>规格数、非规格数、特殊数有什么用呢？</p>
+<p>如果你要往里面存储 4e38(这超过了最大的可取值), 32 位浮点数就会在内存中这样记录 “你存储的数超过了我的最大表示范围, 那我就记录你存储了一个无穷大…”</p>
+<p>如果你要给一个负数开根号(如 <strong>√-1</strong>), 但是 ieee754 标准中的浮点数却不知道该怎么进行这个运算, 它就会在内存中这样记录 “不知道怎么算, 这不是个数值, 记录为 NaN”</p>
+</li>
+<li><p>单精度中三种数对应的指数位情况如下图。 <img src="https://pic4.zhimg.com/80/v2-ca78d279de4682dcd42f8ec28da27637_1440w.jpg" alt="img"></p>
+</li>
+</ul>
+<h2 id="五、浮点数的范围和精度（双精度为例）"><a href="#五、浮点数的范围和精度（双精度为例）" class="headerlink" title="五、浮点数的范围和精度（双精度为例）"></a>五、浮点数的范围和精度（双精度为例）</h2><h3 id="浮点数的范围"><a href="#浮点数的范围" class="headerlink" title="浮点数的范围"></a>浮点数的范围</h3><ul>
+<li><p>最大正数</p>
+<p>最大正数是指能表示的最大的数</p>
+<p>因此双精度浮点数最大正数值的符号位 S&#x3D;0，指数偏移值 E&#x3D;2046，指数 e&#x3D;2046-1023&#x3D;1023，尾数 F&#x3D;1111 …. 1111（一共 52 个 1），其机器码为：0 <font color=\#0099ff>11111111110</font> 52 个 1。</p>
+<p>MAX_VALUE&#x3D;(−1)^S^×1.F×2^e^&#x3D;+(1.52 个 1)×2^1023^&#x3D;1.7976931348623157e^+308^</p>
+<p>那么最大正数值:Number.MAX_VALUE &#x3D;&#x3D;&#x3D; 1.7976931348623157e+308</p>
+<p>但是呢，并不能表示最大正数下面的所有整数</p>
+<p>例如，当指数为 1023 时，小数点向右移动 1023 位，位数不够补零，记住只能补零，所以如果某个数需要补 1，那么无法实现，只能舍入，在计算机中存储一个和它比较接近的值，误差这就出现了。</p>
+</li>
+<li><p>最大安全数</p>
+<p>最大安全数是指在此范围内的整数是精确的</p>
+<p>如果指数最大是 52，那么小数点可以在尾数位的 52 位中来回移动。别忘了尾数位的 52 位可以为 1，也可以为 0，在加上小数点左边的那个 1，一共 53 个 1，所表示的数是 2^53^ - 1。换句话说，双精度整数可以精确表示 1 -&gt; 2^53^ - 1 之间的整数。</p>
+<p>Number.MAX_SAFE_INTEGER &#x3D;&#x3D;&#x3D; 9007199254740991</p>
+</li>
+</ul>
+<h3 id="浮点数的精度"><a href="#浮点数的精度" class="headerlink" title="浮点数的精度"></a>浮点数的精度</h3><p>首先精度是什么，浮点数的精度是指浮点数的有效数字的最大位数，从左边第一个不为 0 的数字开始的个数。</p>
+<p>指数位的二进制位数决定浮点数的表示范围，尾数位的二进制位数决定浮点数的精度。以 64 位浮点数为例，尾数位有 52 位，加上规格化后小数点前隐藏的一位 1，那么浮点数以二进制表示的话精度是 53 位，53 位所能表示的最大数是 2^53^ − 1 &#x3D; 9,007,199,254,740,991 共 16 位，所以 double 最多能表示十进制有效数字 16 位，但绝对能保证的为 15 位，即 double 的十进制精度为 16 位。</p>
+<p>总结，指数位决定范围，尾数位决定精度</p>
+<h2 id="六、浮点数的具体表示（单精度为例）"><a href="#六、浮点数的具体表示（单精度为例）" class="headerlink" title="六、浮点数的具体表示（单精度为例）"></a>六、浮点数的具体表示（单精度为例）</h2><ul>
+<li><p>0.75<br>[0.75]<del>10</del> &#x3D; [0.11]<del>2</del> &#x3D; [-1^0^ * 1.1^-1^]</p>
+<p>符号位 S &#x3D; 0</p>
+<p>指数 e &#x3D; -1</p>
+<p>指数位 E &#x3D; e + 固定偏移值 &#x3D; e + 127 &#x3D; 126 &#x3D; 0111 1110</p>
+<p>小数位 F &#x3D; 1，补 0 后的 F &#x3D; 1000 0000 0000 0000 0000 000</p>
+<p>0.75 的机器码如下：0.75 &#x3D; [0<font color=\#0099ff>011 1111 0</font>100 0000 0000 0000 0000 0000 ]</p>
+</li>
+<li><p>-12.5<br>[-12.5]<del>10</del> &#x3D; [-1100.1]<del>2</del> &#x3D; [-1^1^ * 1.1001^3^]</p>
+<p>符号位 S &#x3D; 1</p>
+<p>指数 e &#x3D; 3</p>
+<p>指数位 E &#x3D; e + 固定偏移值 &#x3D; e + 127 &#x3D; 130 &#x3D; 1000 0011</p>
+<p>小数位 F &#x3D; 1001，补 0 后的 F &#x3D; 1001 0000 0000 0000 0000 000</p>
+<p>-12.5 的机器码如下：-12.5 &#x3D; [1<font color=\#0099ff>100 0001 1</font>100 1000 0000 0000 0000 0000 ]</p>
+</li>
+</ul>
+<p>关于浮点数十进制转换为二进制参考：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/xifenglou/p/9172015.html">https://www.cnblogs.com/xifenglou/p/9172015.html</a></p>
+<h2 id="七、浮点数的运算过程"><a href="#七、浮点数的运算过程" class="headerlink" title="七、浮点数的运算过程"></a>七、浮点数的运算过程</h2><p>浮点数的加减运算一般由以下五个步骤完成：<strong>对阶</strong>、<strong>尾数运算</strong>、<strong>规格化</strong>、<strong>舍入处理</strong>、<strong>溢出判断</strong></p>
+<h3 id="对阶"><a href="#对阶" class="headerlink" title="对阶"></a>对阶</h3><p>所谓对阶是指将两个进行运算的浮点数的阶码（指数偏移值）对齐的操作。对阶的目的是为使两个浮点数的尾数能够进行加减运算。因为，当进行 1.Fx x 2^Ex^与 1.Fy x 2^Ey^加减运算时，只有使两浮点数的指数位部分相同，才能将相同的指数值作为公因数提出来，然后进行尾数的加减运算。对阶的具体方法是：首先求出两浮点数阶码的差，即 ⊿E ＝ Ex - Ey，将小阶码加上 ⊿E，使之与大阶码相等，同时将小阶码对应的浮点数的尾数右移相应位数，以保证该浮点数的值不变。几点注意：</p>
+<p>（1）对阶的原则是小阶对大阶，之所以这样做是因为若大阶对小阶，则尾数的数值部分的高位需移出，而小阶对大阶移出的是尾数的数值部分的低位，这样损失的精度更小。</p>
+<p>（2）若 ⊿E ＝ 0，说明两浮点数的阶码已经相同，无需再做对阶操作了。</p>
+<p>（3）采用补码表示的尾数右移时，符号位保持不变。</p>
+<p>（4）由于尾数右移时是将最低位移出，会损失一定的精度，为减少误差，可先保留若干移出的位，供以后舍入处理用。</p>
+<h3 id="尾数运算"><a href="#尾数运算" class="headerlink" title="尾数运算"></a>尾数运算</h3><p>尾数运算就是进行完成对阶后的尾数相加减。这里采用的纯小数的定点数加减运算。</p>
+<h3 id="结果规格化"><a href="#结果规格化" class="headerlink" title="结果规格化"></a>结果规格化</h3><p>在机器中，为保证浮点数表示的唯一性，浮点数在机器中都是以规格化形式存储的。对于 IEEE754 标准的浮点数来说，就是尾数必须是 1.F 的形式。由于在进行上述两个定点小数的尾数相加减运算后，尾数有可能是非规格化形式，为此必须进行规格化操作。</p>
+<p>规格化操作包括左规和右规两种情况。</p>
+<p>左规操作：将尾数左移，同时阶码减值，直至尾数成为 1.F 的形式。例如，浮点数 0.0011x2^5^是非规格化的形式，需进行左规操作，将其尾数左移 3 位，同时阶码减 3，就变成 1.1100x2^2^规格化形式了。</p>
+<p>右规操作：将尾数右移 1 位，同时阶码增 1，便成为规格化的形式了。要注意的是，右规操作只需将尾数右移一位即可，这种情况出现在尾数的最高位（小数点前一位）运算时出现了进位，使尾数成为 10.xxxx 或 11.xxxx 的形式。例如，10.0011x2^5^右规一位后便成为 1.00011x2^6^的规格化形式了。</p>
+<h3 id="舍入处理"><a href="#舍入处理" class="headerlink" title="舍入处理"></a>舍入处理</h3><p>浮点运算在对阶或右规时，尾数需要右移，被右移出去的位会被丢掉，从而造成运算结果精度的损失。为了减少这种精度损失，可以将一定位数的移出位先保留起来，称为保护位，在规格化后用于舍入处理。</p>
+<p>IEEE754 标准列出了四种可选的舍入处理方法：</p>
+<p>（1）就近舍入（round to nearest）这是标准列出的默认舍入方式，其含义相当于我们日常所说的“四舍五入”。例如，对于 32 位单精度浮点数来说，若超出可保存的 23 位的多余位大于等于 100…01，则多余位的值超过了最低可表示位值的一半，这种情况下，舍入的方法是在尾数的最低有效位上加 1；若多余位小于等于 011…11，则直接舍去；若多余位为 100…00，此时再判断尾数的最低有效位的值，若为 0 则直接舍去，若为 1 则再加 1。</p>
+<p>（2）朝+∞ 舍入（round toward +∞）对正数来说，只要多余位不为全 0，则向尾数最低有效位进 1；对负数来说，则是简单地舍去。</p>
+<p>（3）朝-∞ 舍入（round toward -∞）与朝+∞ 舍入方法正好相反，对正数来说，只是简单地舍去；对负数来说，只要多余位不为全 0，则向尾数最低有效位进 1。</p>
+<p>（4）朝 0 舍入（round toward 0）</p>
+<p>即简单地截断舍去，而不管多余位是什么值。这种方法实现简单，但容易形成累积误差，且舍入处理后的值总是向下偏差。</p>
+<h3 id="溢出判断"><a href="#溢出判断" class="headerlink" title="溢出判断"></a>溢出判断</h3><p>与定点数运算不同的是，浮点数的溢出是以其运算结果的阶码的值是否产生溢出来判断的。若阶码的值超过了阶码所能表示的最大正数，则为上溢，进一步，若此时浮点数为正数，则为正上溢，记为+∞，若浮点数为负数，则为负上溢，记为-∞；若阶码的值超过了阶码所能表示的最小负数，则为下溢，进一步，若此时浮点数为正数，则为正下溢，若浮点数为负数，则为负下溢。正下溢和负下溢都作为 0 处理。</p>
+<p>要注意的是，浮点数的表示范围和补码表示的定点数的表示范围是有所不同的，定点数的表示范围是连续的，而浮点数的表示范围可能是不连续的。</p>
+<h2 id="八、精度丢失场景分析"><a href="#八、精度丢失场景分析" class="headerlink" title="八、精度丢失场景分析"></a>八、精度丢失场景分析</h2><p>为什么 0.1 + 0.2 &#x3D; 0.3000000000004？</p>
+<ul>
+<li><p>推导</p>
+<p>0.1&gt;&gt;&gt;二进制&gt;&gt;&gt;二进制科学记数法&gt;&gt;机器码[64 位]（符号位+指数位+尾数位）</p>
+<p>0.1&gt;&gt;&gt;<br>0.0001100110011001100110011001100110011001100110011001101&gt;&gt;&gt;<br>1.1001100110011001100110011001100110011001100110011010 * 2^-4^&gt;&gt;&gt;<br>0<font color=\#0099ff>01111111011</font>1001100110011001100110011001100110011001100110011010</p>
+<p>0.2&gt;&gt;二进制&gt;&gt;&gt;二进制科学记数法&gt;&gt;机器码[64 位]（符号位+指数位+尾数位）</p>
+<p>0.2&gt;&gt;&gt;<br>0.001100110011001100110011001100110011001100110011001101&gt;&gt;&gt;<br>1.1001100110011001100110011001100110011001100110011010 * 2^-3^&gt;&gt;&gt;<br>0<font color=\#0099ff>01111111100</font>1001100110011001100110011001100110011001100110011010</p>
+<p>可以看出来在转换为二进制时</p>
+<p>0.1 &gt;&gt;&gt; 0.0001 1001 1001 1001…（1001 无限循环）<br>0.2 &gt;&gt;&gt; 0.0011 0011 0011 0011…（0011 无限循环）</p>
+<p>⚠️ 注意：这里在存储的时候已经发生了精度丢失</p>
+</li>
+<li><p>对阶</p>
+<p>小阶对大阶则-4 向-3 对齐，则 0.1 的二进制科学记数法为</p>
+<p><strong>0</strong>.1100110011001100110011001100110011001100110011001101<font color=red>0</font> * 2^-3^</p>
+<p>⚠️ 注意：加粗的那个 0 是新补的，红色的那个 0 已经被移出</p>
+</li>
+<li><p>尾数运算</p>
+<p>0.1100110011001100110011001100110011001100110011001101 +</p>
+<p>1.1001100110011001100110011001100110011001100110011010 &#x3D;</p>
+<p>10.0110011001100110011001100110011001100110011001100111</p>
+</li>
+<li><p>结果规格化</p>
+<p>运算结果规格话得到的结果为</p>
+<p>1.00110011001100110011001100110011001100110011001100111* 2^-2^</p>
+<p>此时尾数已经为 53 位了</p>
+</li>
+<li><p>舍入处理</p>
+<p>1.0011001100110011001100110011001100110011001100110011<font color=red>1</font>* 2^-2^ &#x3D;<br>1.0011001100110011001100110011001100110011001100110100*2^-2^</p>
+<p>⚠️ 注意：红色的那个 1 会被舍入，这里第二次精度丢失</p>
+<p>转换成十进制结果是：0.30000000000000004，结果并不等于 0.3。</p>
+</li>
+<li><p>溢出判断</p>
+<p>浮点数的溢出其实是阶码的溢出表现出来的，在算术运算过程中要检查是否产生了溢出。若阶码正常，算术运算正常结束；若阶码溢出，则要进行相应处理。如上求和结果的阶码为 01111111101，没有产生溢出，因此运算结束。</p>
+</li>
+</ul>
+<h2 id="九、工具"><a href="#九、工具" class="headerlink" title="九、工具"></a>九、工具</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://www.h-schmidt.net/FloatConverter/IEEE754.html">https://www.h-schmidt.net/FloatConverter/IEEE754.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.sojson.com/hexconvert.html">https://www.sojson.com/hexconvert.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.binaryconvert.com/result_float.html">https://www.binaryconvert.com/result_float.html</a></li>
+</ul>
+<h2 id="十、参考链接"><a href="#十、参考链接" class="headerlink" title="十、参考链接"></a>十、参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/K346K346/article/details/50487127">https://blog.csdn.net/K346K346/article/details/50487127</a></li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/IEEE_754-1985">https://en.wikipedia.org/wiki/IEEE_754-1985</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/30703042">https://zhuanlan.zhihu.com/p/30703042</a></li>
+<li><a target="_blank" rel="noopener" href="https://zh.m.wikipedia.org/zh-cn/IEEE_754">https://zh.m.wikipedia.org/zh-cn/IEEE_754</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/mukekeheart/p/10517298.html">https://www.cnblogs.com/mukekeheart/p/10517298.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/gao_zhennan/article/details/120717424">https://blog.csdn.net/gao_zhennan/article/details/120717424</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/yilang/p/11277201.html">https://www.cnblogs.com/yilang/p/11277201.html</a></li>
+</ul>
+</p></div><div class="share"><span>Share</span>&nbsp;<span class="soc"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></span><span class="soc"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></span><span class="soc"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=http://example.com/2023/04/26/聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题）/%20ml%20聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题）"></a></span></div><div class="pagination"><p class="clearfix"><span>&nbsp;</span><span class="next pagbuttons"><a role="navigation" href="/2023/04/26/test-my-site/" title="test_my_site">Next post: test_my_site&nbsp;<i class="fa fa-angle-double-right"></i></a></span></p></div></div></div></div><div class="visible-xs site-bottom-footer"><footer><p>&copy;&nbsp;2023&nbsp;<a target="_blank" href="http://example.com" rel="noopener noreferrer">Meng Liu</a></p><p>Theme&nbsp;<a target="_blank" href="https://github.com/SumiMakito/hexo-theme-typography" rel="noopener noreferrer">Typography</a>&nbsp;by&nbsp;<a target="_blank" href="https://www.keep.moe" rel="noopener noreferrer">Makito</a></p><p>Proudly published with&nbsp;<a target="_blank" href="https://hexo.io" rel="noopener noreferrer">Hexo</a></p></footer></div></div></div></div><script src="/js/jquery-3.1.0.min.js"></script><script src="/js/bootstrap.min.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script><script src="/js/google-analytics.js"></script><script src="/js/typography.js"></script></body></html>

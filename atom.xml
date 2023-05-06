@@ -6,7 +6,7 @@
   <link href="http://example.com/atom.xml" rel="self"/>
   
   <link href="http://example.com/"/>
-  <updated>2023-04-26T07:49:34.817Z</updated>
+  <updated>2023-05-06T03:16:04.833Z</updated>
   <id>http://example.com/</id>
   
   <author>
@@ -17,18 +17,18 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Hello World</title>
-    <link href="http://example.com/2023/04/26/hello-world/"/>
-    <id>http://example.com/2023/04/26/hello-world/</id>
+    <title>聊一聊 IEEE754 标准（里面涉及浮点数精度丢失问题）</title>
+    <link href="http://example.com/2023/04/26/%E8%81%8A%E4%B8%80%E8%81%8A%20IEEE754%20%E6%A0%87%E5%87%86%EF%BC%88%E9%87%8C%E9%9D%A2%E6%B6%89%E5%8F%8A%E6%B5%AE%E7%82%B9%E6%95%B0%E7%B2%BE%E5%BA%A6%E4%B8%A2%E5%A4%B1%E9%97%AE%E9%A2%98%EF%BC%89/"/>
+    <id>http://example.com/2023/04/26/%E8%81%8A%E4%B8%80%E8%81%8A%20IEEE754%20%E6%A0%87%E5%87%86%EF%BC%88%E9%87%8C%E9%9D%A2%E6%B6%89%E5%8F%8A%E6%B5%AE%E7%82%B9%E6%95%B0%E7%B2%BE%E5%BA%A6%E4%B8%A2%E5%A4%B1%E9%97%AE%E9%A2%98%EF%BC%89/</id>
     <published>2023-04-26T10:34:19.948Z</published>
-    <updated>2023-04-26T07:49:34.817Z</updated>
+    <updated>2023-05-06T03:16:04.833Z</updated>
     
     
       
       
         
         
-    <summary type="html">&lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.io/docs/&quot;&gt;documentation&lt;/a&gt;</summary>
+    <summary type="html">&lt;h2 id=&quot;一、什么是-IEEE754-标准&quot;&gt;&lt;a href=&quot;#一、什么是-IEEE754-标准&quot; class=&quot;headerlink&quot; title=&quot;一、什么是 IEEE754 标准&quot;&gt;&lt;/a&gt;一、什么是 IEEE754 标准&lt;/h2&gt;&lt;p&gt;IEEE</summary>
         
       
     
